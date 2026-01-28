@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlmodel
+asyncpg
+greenlet
+google-genai
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt==3.2.2
+pydantic-settings
+aiosqlite
+qrcode
+pillow

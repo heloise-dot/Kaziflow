@@ -1,0 +1,8 @@
+
+{
+  "name": "KaziFlow Supply Chain Finance",
+  "description": "A production-grade Supply Chain Finance platform for East African SMEs, featuring AI risk scoring, invoice financing, and instant mobile money settlements.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
