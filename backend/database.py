@@ -4,10 +4,16 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine
 import os
 
-# Default to sqlite for local dev if no URL provided (ensure you set DATABASE_URL for Postgres)
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///./database.db")
+# Default to PostgreSQL if available, otherwise fallback to local SQLite for prototyping
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL", 
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/kaziflow"
+)
+# Fallback logic to make it work out-of-the-box if the user hasn't set up PG yet:
+# if "postgresql" not in DATABASE_URL:
+#     DATABASE_URL = "sqlite+aiosqlite:///./database.db"
 
-# Auto-fix for common user error: using sync driver 'postgresql://' instead of async 'postgresql+asyncpg://'
+# Ensure async driver is used
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 

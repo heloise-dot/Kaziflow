@@ -1,58 +1,75 @@
-# KaziFlow Backend: Technical Architecture & Core Logic
+# KaziFlow Backend Technical Documentation
 
-This document explains the technical "tactics" used to build the KaziFlow supply chain finance backend.
+KaziFlow is a robust Supply Chain Finance platform built with **FastAPI**, **SQLModel**, and **PostgreSQL**. It leverages **Google Gemini 2.0 Flash** for AI-driven risk assessment and provides a QR-based verification system for secure invoicing.
 
-## 1. Core Technology Stack
-- **Framework**: [FastAPI](https://fastapi.tiangolo.com/) - Chosen for its high performance, automatic OpenAPI documentation, and native support for asynchronous programming.
-- **Database Wrapper**: [SQLModel](https://sqlmodel.tiangolo.com/) - A library that combines SQLAlchemy (for database interactions) and Pydantic (for data validation). This allows using the same models for both database tables and API responses.
-- **Database**: **SQLite** (local file `database.db`) - Used for the prototype phase as it requires zero configuration and provides a portable, relational storage solution.
-- **AI Engine**: **Google Gemini 2.0 Flash** - Integrated via the `google-generativeai` package to provide real-time risk analysis.
+## 🏗️ System Architecture
 
-## 2. Authentication Strategy
-KaziFlow leverages **JWT (JSON Web Tokens)** for stateless authentication.
-- **Password Hashing**: Uses `bcrypt` for secure storage.
-- **The Python 3.13 Fix**: Since `passlib` is deprecated and has compatibility issues with Python 3.13 (specifically `bcrypt` 4.x), we implemented a **Robust Monkeypatch** in `backend/main.py`. This ensures the backend remains stable and secure regardless of the underlying library version.
-- **Role-Based Access Control (RBAC)**: Every token contains the user's role (`vendor`, `retailer`, `bank`, `admin`). Endpoints use the `get_current_user` dependency to verify permissions before processing requests.
-
-## 3. Database Architecture
-The database follows a relational structure optimized for supply chain tracking:
+The backend follows a modular router-based architecture for scalability and maintainability.
 
 ```mermaid
-erDiagram
-    USER ||--o{ INVOICE : "owns/manages"
-    USER ||--o{ NOTIFICATION : "receives"
-    USER ||--o{ RISK_ASSESSMENT : "subject of"
-    INVOICE }|--|| USER : "links to retailer"
-
-    USER {
-        uuid id
-        string email
-        string full_name
-        string role
-        string company_name
-    }
-
-    INVOICE {
-        uuid id
-        float amount
-        string status
-        datetime due_date
-        uuid vendor_id
-        uuid retailer_id
-        string qr_code
-    }
+graph TD
+    A[Client App] -->|HTTPS/JWT| B(FastAPI Gateway)
+    B --> C{Routers}
+    C -->|Auth| D[Auth Router]
+    C -->|Invoices| E[Invoice Router]
+    C -->|Risk| F[Risk Router]
+    C -->|Notify| G[Notification Router]
+    
+    D & E & F & G -->|SQLModel| H[PostgreSQL DB]
+    F -->|SDK| I[Google Gemini AI]
+    E -->|Utilities| J[QR Generator]
 ```
 
-## 4. Key Innovation: QR-Based Verification
-To bridge the gap between physical delivery and digital financing:
-- **Tactic**: Upon invoice creation, the backend generates a unique QR code.
-- **Implementation**: The QR code is converted to a **Base64 string** (Data URI). This allows the frontend to display the QR code directly as an image without needing a separate file storage service (like AWS S3) for the prototype.
-- **Verification**: Retailers can scan (or manually enters the ID) to confirm they have received the goods, which immediately updates the invoice status to `verified`.
+## 🔒 Security & Authentication
 
-## 5. AI Risk Scoring (FIFO Logic)
-Our AI model evaluates "FIFO Back Score" by analyzing:
-- **Consistency**: How often does the vendor deliver on time?
-- **Relationship Health**: How long have the vendor and retailer worked together?
-- **Transaction Density**: Are there frequent, healthy transactions (First-In, First-Out)?
+- **JWT (JSON Web Tokens)**: Secure, stateless authentication.
+- **Bcrypt**: Industry-standard password hashing using `passlib`.
+- **RBAC (Role-Based Access Control)**: Enforced via FastAPI dependencies (`get_current_user`).
+- **CORS**: Configured for secure frontend-backend communication.
 
-The AI prompt (in `backend/services/ai_service.py`) instructs Gemini to return a structured JSON response including a score (0-100) and specific risk factors.
+## 🤖 AI Risk Analysis
+
+Our AI service analyzes vendor stability using a **FIFO (First-In, First-Out) Back-Score** logic:
+1.  **History Retrieval**: Fetches the last 5 invoices and 5 risk assessments.
+2.  **Prompt Engineering**: Feeds historical status, amounts, and company details into Gemini 2.0 Flash.
+3.  **Scoring**: Returns a 0-100 risk score and qualitative reasoning.
+
+## 📄 API Reference (Swagger)
+
+KaziFlow provides interactive API documentation out of the box. Once the server is running, you can access:
+
+- **Interactive UI (Swagger)**: `http://127.0.0.1:8000/docs`
+- **ReDoc**: `http://127.0.0.1:8000/redoc`
+
+## 🛠️ Tech Stack
+
+| Component | Technology |
+| :--- | :--- |
+| Framework | FastAPI |
+| ORM | SQLModel (SQLAlchemy) |
+| Database | PostgreSQL (asynchronous via asyncpg) |
+| AI | Google Gemini 2.0 Flash |
+| Auth | python-jose, passlib |
+| Documentation | OpenAPI (Swagger) |
+
+## 🚀 Deployment & Local Setup
+
+### 1. Requirements
+- Python 3.10+
+- PostgreSQL instance
+
+### 2. Environment Variables (`.env`)
+```env
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost/kaziflow
+GOOGLE_API_KEY=your_gemini_key
+SECRET_KEY=your_jwt_secret
+```
+
+### 3. Installation
+```bash
+pip install -r backend/requirements.txt
+python start_backend.py
+```
+
+---
+*KaziFlow - Empowring Small Businesses through Secure Financing.*

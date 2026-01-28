@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from backend.database import get_session
-from backend.models import User, UserBase, UserCreate, UserRole
+from backend.models import User, UserBase, UserCreate, UserRole, UserUpdate, UserChangePassword
 from backend.auth import get_password_hash, verify_password, create_access_token, get_current_user
 from typing import Annotated
 
@@ -51,3 +51,33 @@ async def login_for_access_token(
 @router.get("/me", response_model=UserBase)
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+@router.patch("/me", response_model=UserBase)
+async def update_user_me(
+    user_update: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    if user_update.full_name is not None:
+        current_user.full_name = user_update.full_name
+    if user_update.company_name is not None:
+        current_user.company_name = user_update.company_name
+    
+    session.add(current_user)
+    await session.commit()
+    await session.refresh(current_user)
+    return current_user
+
+@router.post("/change-password")
+async def change_password(
+    pwd_in: UserChangePassword,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    if not verify_password(pwd_in.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+    
+    current_user.hashed_password = get_password_hash(pwd_in.new_password)
+    session.add(current_user)
+    await session.commit()
+    return {"status": "success", "message": "Password updated successfully"}

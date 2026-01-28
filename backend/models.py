@@ -19,6 +19,14 @@ class UserBase(SQLModel):
 class UserCreate(UserBase):
     password: str = Field(max_length=72)
 
+class UserUpdate(SQLModel):
+    full_name: Optional[str] = None
+    company_name: Optional[str] = None
+
+class UserChangePassword(SQLModel):
+    current_password: str
+    new_password: str = Field(max_length=72)
+
 class User(UserBase, table=True):
     id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
